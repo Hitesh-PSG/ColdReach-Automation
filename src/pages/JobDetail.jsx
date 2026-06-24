@@ -6,7 +6,8 @@ import {
   ChevronDown, Sparkles, FileText, MessageSquare
 } from 'lucide-react';
 import useStore from '../store';
-import { analyzeATS, draftColdEmail, draftLinkedInDM, getResumeImprovements } from '../gemini';
+import { analyzeATS, draftColdEmail, draftLinkedInDM, getResumeImprovements, generateSkillRoadmap } from '../gemini';
+import SkillRoadmap from '../components/SkillRoadmap';
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 
 function ScoreGauge({ score, size = 140 }) {
@@ -167,6 +168,8 @@ export default function JobDetail() {
   const [atsLoading, setAtsLoading] = useState(false);
   const [resumeSuggestions, setResumeSuggestions] = useState(null);
   const [resumeLoading, setResumeLoading] = useState(false);
+  const [roadmapData, setRoadmapData] = useState(null);
+  const [roadmapLoading, setRoadmapLoading] = useState(false);
 
   if (!job) return (
     <div className="empty-state">
@@ -199,6 +202,19 @@ export default function JobDetail() {
       addToast(e.message, 'error');
     }
     setResumeLoading(false);
+  };
+
+  const handleGenerateRoadmap = async () => {
+    if (!geminiKey) { addToast('Add your Gemini API key in Settings first', 'error'); return; }
+    setRoadmapLoading(true);
+    try {
+      const result = await generateSkillRoadmap(geminiKey, job, profile);
+      setRoadmapData(result);
+      addToast('Skill roadmap generated!', 'success');
+    } catch (e) {
+      addToast(e.message, 'error');
+    }
+    setRoadmapLoading(false);
   };
 
   const displayScore = atsData?.overallScore ?? job.atsScore;
@@ -276,6 +292,7 @@ export default function JobDetail() {
         {[
           { id: 'ats', label: '🎯 ATS Score', },
           { id: 'jd', label: '📄 Job Description' },
+          { id: 'roadmap', label: '🗺️ Skill Roadmap' },
           { id: 'outreach', label: '✉️ Outreach' },
           { id: 'resume', label: '✨ Resume Tips' },
         ].map(tab => (
@@ -405,6 +422,61 @@ export default function JobDetail() {
                 </div>
               </div>
             </div>
+          )}
+        </div>
+      )}
+      {/* Tab: Skill Roadmap */}
+      {activeTab === 'roadmap' && (
+        <div className="animate-fade-in">
+          {!roadmapData && !roadmapLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-5)', padding: 'var(--space-12)', textAlign: 'center' }}>
+              <div style={{ width: 80, height: 80, background: 'rgba(108,99,255,0.12)', borderRadius: 'var(--radius-xl)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Zap size={36} color="var(--color-brand-primary)" />
+              </div>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.2rem', marginBottom: 8 }}>Generate Learning Roadmap</h3>
+                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', maxWidth: 440 }}>
+                  Compare your skills against the job requirements using Gemini AI to identify gaps, prioritize learning, and generate a step-by-step roadmap.
+                </p>
+                {!geminiKey && <p style={{ color: 'var(--color-warning)', fontSize: '0.82rem', marginTop: 8 }}>⚠️ Add your Gemini API key in Settings first</p>}
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+                <button className="btn btn-primary btn-lg" onClick={handleGenerateRoadmap}>
+                  <Sparkles size={18} /> Generate with AI
+                </button>
+                <button className="btn btn-ghost btn-lg" onClick={() => setRoadmapData({
+                  overallReadiness: 'Almost Ready',
+                  strongSkills: job.requiredSkills.slice(0, Math.min(3, job.requiredSkills.length)),
+                  skillGaps: (job.requiredSkills.length > 3 ? job.requiredSkills.slice(3) : ['Docker', 'AWS', 'System Design']).map((skill, index) => ({
+                    skill,
+                    priority: index === 0 ? 'High' : index === 1 ? 'Medium' : 'Low',
+                    currentLevel: index === 0 ? 'None' : 'Beginner',
+                    targetLevel: 'Intermediate',
+                    estimatedWeeks: (index + 1) * 2,
+                    learningResources: [
+                      `Official ${skill} Documentation`,
+                      `Udemy Course on modern ${skill} development`,
+                      `Learn ${skill} in 100 Seconds video guide`
+                    ]
+                  })),
+                  suggestedOrder: job.requiredSkills.length > 3 ? job.requiredSkills.slice(3) : ['Docker', 'AWS', 'System Design'],
+                  summary: `You have strong qualifications in ${job.requiredSkills.slice(0, 2).join(', ')}, but you need to develop skills in ${job.requiredSkills.length > 3 ? job.requiredSkills.slice(3, 5).join(' and ') : 'Docker and AWS'} to match the job requirements fully. We suggest focusing on ${job.requiredSkills.length > 3 ? job.requiredSkills[3] : 'Docker'} first.`
+                })}>
+                  Use Demo Data
+                </button>
+              </div>
+            </div>
+          )}
+
+          {roadmapLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-4)', padding: 'var(--space-12)' }}>
+              <div className="spinner" style={{ width: 48, height: 48, borderWidth: 4 }} />
+              <p style={{ color: 'var(--color-text-muted)' }}>Analyzing skill gaps and generating learning roadmap…</p>
+            </div>
+          )}
+
+          {roadmapData && (
+            <SkillRoadmap roadmap={roadmapData} />
           )}
         </div>
       )}
