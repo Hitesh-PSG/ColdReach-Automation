@@ -1,13 +1,31 @@
 import { Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
-import { Search, Mail, Settings, Zap, Bell } from 'lucide-react';
+import { Search, Mail, Settings, Zap, Bell, LayoutDashboard, Briefcase, Target, User } from 'lucide-react';
 import useStore from './store';
 import SettingsPage from './pages/SettingsPage';
 import Outreach from './pages/Outreach';
+import Dashboard from './pages/Dashboard';
+import Jobs from './pages/Jobs';
+import JobDetail from './pages/JobDetail';
+import Tracker from './pages/Tracker';
+import Profile from './pages/Profile';
 import ToastStack from './components/ToastStack';
 
 const NAV = [
-  { to: '/', icon: Mail, label: 'Outreach Hub' },
+  { to: '/',        icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/jobs',    icon: Briefcase,       label: 'Job Feed' },
+  { to: '/tracker', icon: Target,          label: 'Tracker' },
+  { to: '/outreach',icon: Mail,            label: 'Outreach Hub' },
+  { to: '/profile', icon: User,            label: 'Profile & Resume' },
 ];
+
+const PAGE_TITLES = {
+  '/':         'Dashboard',
+  '/jobs':     'Job Feed',
+  '/tracker':  'Application Tracker',
+  '/outreach': 'Outreach Hub',
+  '/profile':  'Profile & Resume',
+  '/settings': 'Settings',
+};
 
 function Sidebar() {
   return (
@@ -59,10 +77,9 @@ function Sidebar() {
 
 function Topbar() {
   const location = useLocation();
-  const pageTitle = {
-    '/': 'Outreach Hub',
-    '/settings': 'Settings',
-  }[location.pathname] || 'JobReach';
+  // For /jobs/:id, show the parent label
+  const pageTitle = PAGE_TITLES[location.pathname]
+    ?? (location.pathname.startsWith('/jobs/') ? 'Job Detail' : 'JobReach');
 
   return (
     <header className="topbar">
@@ -101,10 +118,14 @@ export default function App() {
         <Topbar />
         <main className="page-content">
           <Routes>
-            <Route path="/" element={<Outreach />} />
-            <Route path="/outreach" element={<Navigate to="/" replace />} />
+            <Route path="/"         element={<Dashboard />} />
+            <Route path="/jobs"     element={<Jobs />} />
+            <Route path="/jobs/:id" element={<JobDetail />} />
+            <Route path="/tracker"  element={<Tracker />} />
+            <Route path="/outreach" element={<Outreach />} />
+            <Route path="/profile"  element={<Profile />} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*"         element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>

@@ -144,6 +144,44 @@ Respond with ONLY valid JSON:
   return JSON.parse(jsonMatch[0]);
 }
 
+// ---- Skill Gap & Learning Roadmap ----
+export async function generateSkillRoadmap(apiKey, job, profile) {
+  const prompt = `You are a career counselor and technical skills assessor. Compare the candidate's profile skills against the job description's required skills.
+Identify which required skills are missing or weak (e.g. low years of experience or low level), and generate a structured, prioritized learning roadmap to close the gap.
+
+JOB DETAILS:
+Title: ${job.title}
+Company: ${job.company}
+Required Skills: ${job.requiredSkills.join(', ')}
+
+CANDIDATE PROFILE:
+Current Title: ${profile.currentTitle}
+Skills: ${profile.skills.map(s => `${s.name} (${s.level}, ${s.years}yrs)`).join(', ')}
+
+Respond with ONLY valid JSON in this exact structure:
+{
+  "overallReadiness": "<Ready|Almost Ready|Needs Development>",
+  "strongSkills": ["skill1", "skill2"],
+  "skillGaps": [
+    {
+      "skill": "<missing or weak skill name>",
+      "priority": "High|Medium|Low",
+      "currentLevel": "<None|Beginner|Intermediate>",
+      "targetLevel": "<level required for the role>",
+      "estimatedWeeks": <number>,
+      "learningResources": ["resource suggestion 1", "resource suggestion 2"]
+    }
+  ],
+  "suggestedOrder": ["skill1 to learn first", "skill2 to learn second"],
+  "summary": "<one paragraph honest assessment of readiness and what to focus on first>"
+}`;
+
+  const raw = await callGemini(apiKey, prompt);
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Invalid response format from Gemini');
+  return JSON.parse(jsonMatch[0]);
+}
+
 // ---- Resume Text Parser ----
 export async function parseResumeText(apiKey, resumeText) {
   const prompt = `You are a professional resume parser and data extractor. Extract the details of the candidate from the resume text provided below.
